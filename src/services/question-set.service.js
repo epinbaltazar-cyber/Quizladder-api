@@ -1,40 +1,46 @@
-const questionSetRepository = require('../repositories/question-set.repository');
-// Change this:
-const { notFound, forbidden } = require('../errors/app-error');
+'use strict';
 
-async function findOrFail(id) {
-  const questionSet = await questionSetRepository.findById(id);
-  if (!questionSet) throw notFound('QUESTION_SET_NOT_FOUND', `No question set has the id ${id}.`);
-  return questionSet;
-}
-function isOwner(questionSet, user) {
-  return questionSet.host_id === user.user_id || user.role === 'ADMIN';
-}
+const questionSetRepo = require('../repositories/question-set.repository');
+const { notFound, forbidden, badRequest } = require('../errors/app-error');
+/**
+ * Question Set Service
+ */
+const getAllQuestionSets = async (userId) => {
+  return await questionSetRepo.findAllByUser(userId);
+};
 
-function list(user) {
-  return user.role === 'ADMIN'
-    ? questionSetRepository.findAll()
-    : questionSetRepository.findAllByHost(user.user_id);
-}
-async function get(id, user) {
-  const questionSet = await findOrFail(id);
-  if (!isOwner(questionSet, user) && !questionSet.is_public) {
-    throw forbidden('This question set belongs to another host.');
+const getQuestionSetById = async (setId, userId) => {
+  const set = await questionSetRepo.findById(setId);
+  if (!set) {
+    throw notFound('Question set not found');
   }
-  return questionSet;
-}
-function create(data, user) {
-  return questionSetRepository.create({ ...data, host_id: user.user_id });
-}
-async function update(id, changes, user) {
-  const questionSet = await findOrFail(id);
-  if (!isOwner(questionSet, user)) throw forbidden('This question set belongs to another host.');
-  return questionSetRepository.update(questionSet, changes);
-}
-async function remove(id, user) {
-  const questionSet = await findOrFail(id);
-  if (!isOwner(questionSet, user)) throw forbidden('This question set belongs to another host.');
-  await questionSetRepository.remove(questionSet);
-}
+  if (set.ownerId !== userId) {
+    throw forbidden('You do not have access to this question set');
+  }
+  return set;
+};
 
-module.exports = { list, get, create, update, remove };
+const createQuestionSet = async (data, userId) => {
+  if (!data.title || !data.questions || data.questions.length === 0) {
+    throw badRequest('Title and at least one question are required');
+  }
+  return await questionSetRepo.create({ ...data, ownerId: userId });
+};
+
+const updateQuestionSet = async (setId, data, userId) => {
+  const set = await getQuestionSetById(setId, userId);
+  return await questionSetRepo.update(set.id, data);
+};
+
+const deleteQuestionSet = async (setId, userId) => {
+  const set = await getQuestionSetById(setId, userId);
+  return await questionSetRepo.delete(set.id);
+};
+
+module.exports = {
+  getAllQuestionSets,
+  getQuestionSetById,
+  createQuestionSet,
+  updateQuestionSet,
+  deleteQuestionSet,
+};

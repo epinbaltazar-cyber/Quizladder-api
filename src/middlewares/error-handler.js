@@ -1,17 +1,27 @@
-// Last stop for any error thrown in a route. Four arguments = error handler.
-// The client gets clean JSON; the stack trace stays in the server log.
-function errorHandler(err, req, res, next) {
+'use strict';
+
+const { AppError } = require('../errors/app-error');
+const { mapConstraintError } = require('../errors/constraint-map');
+
+module.exports = (err, req, res, next) => {
+  // Handle mapped DB constraint errors
+  const mappedError = mapConstraintError(err);
+  if (mappedError) {
+    return res.status(mappedError.statusCode).json({
+      error: mappedError.message,
+    });
+  }
+
+  // Handle custom AppError instances
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      error: err.message,
+    });
+  }
+
+  // Fallback internal server error
   console.error(err);
-
-  const status = err.status || 500;
-  const isServerFault = status >= 500;
-
-  res.status(status).json({
-    error: {
-      code: isServerFault ? 'INTERNAL_ERROR' : err.code || 'BAD_REQUEST',
-      message: isServerFault ? 'Something went wrong on the server.' : err.message,
-    },
+  return res.status(500).json({
+    error: 'Internal Server Error',
   });
-}
-
-module.exports = errorHandler;
+};
