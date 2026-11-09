@@ -60,11 +60,14 @@ Base URL: `http://localhost:3001/api/v1`
 
 ## What "completed" means in my game
 
-[One or two sentences: when does a player count as having completed a game? For example: "A player completed the game when they answered every question, even if some answers were wrong or timed out."]
+A player completes the game when they finish answering all ladder tiers of questions and their final score is successfully recorded, regardless of whether individual answers were correct or incorrect.
 
 ## Tables
 
-[List your tables, one line each, in the order of your migrations.]
+- `Players` - Stores user identity details and unique student identifiers.
+- `Questions` - Holds the library tournament questions, organized by difficulty tiers with JSON-stored options and correct answers.
+- `GameSessions` - Tracks individual playthrough instances, linking players to their scores, highest tiers reached, and completion status.
+- `PlayerAnswers` - Records individual answers submitted by players for each question within a game session, tracking correctness.
 
 ## Database scripts
 
